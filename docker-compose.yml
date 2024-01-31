@@ -1,0 +1,13 @@
+version: "3.7"
+
+services:
+  go-app:
+    build: ./
+    container_name: "Go-Container"
+    image: "my-go-app"
+    volumes:
+      - ./:/go/src/app/
+    ports:
+      - "8080:8080"
+    tty: true
+    stdin_open: true
