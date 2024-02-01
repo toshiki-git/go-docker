@@ -2,43 +2,114 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
+	"encoding/json"
 	"log"
+	"net/http"
+	"strconv"
 
+	"test/internal/model"
+	"test/internal/repository"
+
+	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
-const (
-	host     = "postgres" // Docker Composeで定義したPostgreSQLサービスの名前に変更
-	port     = 5432
-	user     = "yourusername" // 実際のPostgreSQLのユーザー名に変更
-	password = "yourpassword" // 実際のPostgreSQLのパスワードに変更
-	dbname   = "yourdbname"   // 実際のデータベース名に変更
-)
-
 func main() {
-	// データベースへの接続
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := sql.Open("postgres", "host=postgres user=userA password=password dbname=MyDB sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	repo := repository.NewUserRepository(db)
 
-	// データベース接続の確認
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
+	r := mux.NewRouter()
+
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hello, World!"))
+	}).Methods("GET")
+	r.HandleFunc("/users", createUser(repo)).Methods("POST")
+	r.HandleFunc("/users/{id:[0-9]+}", readUser(repo)).Methods("GET")
+	r.HandleFunc("/users/{id:[0-9]+}", updateUser(repo)).Methods("PUT")
+	r.HandleFunc("/users/{id:[0-9]+}", deleteUser(repo)).Methods("DELETE")
+
+	log.Fatal(http.ListenAndServe(":8080", r))
+}
+
+func createUser(repo *repository.UserRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var u model.User
+		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := repo.Create(r.Context(), &u); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
 	}
+}
 
-	// テストデータの書き込み
-	name := "John Doe"
-	age := 30
-	_, err = db.Exec("INSERT INTO test_table (name, age) VALUES ($1, $2)", name, age)
-	if err != nil {
-		log.Fatal(err)
+func updateUser(repo *repository.UserRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id, err := strconv.Atoi(vars["id"])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var u model.User
+		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		u.ID = int64(id)
+
+		if err := repo.Update(r.Context(), &u); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
+}
 
-	fmt.Println("Data inserted successfully!")
+func readUser(repo *repository.UserRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id, err := strconv.Atoi(vars["id"])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		user, err := repo.Read(r.Context(), id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(user); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func deleteUser(repo *repository.UserRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id, err := strconv.Atoi(vars["id"])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := repo.Delete(r.Context(), id); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
