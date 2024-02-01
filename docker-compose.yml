@@ -6,7 +6,7 @@ services:
     container_name: "Go-Container"
     image: "my-go-app"
     volumes:
-      - ./:/go/src/app/
+      - ./:/app
     ports:
       - "8080:8080"
     tty: true
@@ -20,9 +20,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: "yourusername" # PostgreSQLのユーザー名
-      POSTGRES_PASSWORD: "yourpassword" # PostgreSQLのパスワード
-      POSTGRES_DB: "yourdbname" # PostgreSQLのデータベース名
+      POSTGRES_USER: "userA"
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_DB: "MyDB"
     volumes:
       - postgres-data:/var/lib/postgresql/data
   pgweb:
@@ -31,7 +31,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - DATABASE_URL=postgres://yourusername:yourpassword@postgres:5432/yourdbname?sslmode=disable
+      - DATABASE_URL=postgres://userA:password@postgres:5432/MyDB?sslmode=disable
     links:
       - postgres:postgres
     restart: always
