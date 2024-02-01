@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   go-app:
-    build: ./
+    build: ./backend
     container_name: "Go-Container"
     image: "my-go-app"
     volumes:
@@ -11,3 +11,18 @@ services:
       - "8080:8080"
     tty: true
     stdin_open: true
+
+  postgres:
+    image: postgres:13
+    container_name: "Postgres-Container"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "yourusername" # PostgreSQLのユーザー名
+      POSTGRES_PASSWORD: "yourpassword" # PostgreSQLのパスワード
+      POSTGRES_DB: "yourdbname" # PostgreSQLのデータベース名
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
