@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   go-app:
-    build: ./backend
+    build: ./
     container_name: "Go-Container"
     image: "my-go-app"
     volumes:
@@ -11,6 +11,8 @@ services:
       - "8080:8080"
     tty: true
     stdin_open: true
+    depends_on:
+      - postgres
 
   postgres:
     image: postgres:13
@@ -23,6 +25,18 @@ services:
       POSTGRES_DB: "yourdbname" # PostgreSQLのデータベース名
     volumes:
       - postgres-data:/var/lib/postgresql/data
+  pgweb:
+    image: sosedoff/pgweb
+    container_name: pgweb
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_URL=postgres://yourusername:yourpassword@postgres:5432/yourdbname?sslmode=disable
+    links:
+      - postgres:postgres
+    restart: always
+    depends_on:
+      - postgres
 
 volumes:
   postgres-data:
