@@ -6,11 +6,13 @@ RUN mkdir /app
 # ワーキングディレクトリの設定
 WORKDIR /app
 
-# Goの依存関係の管理ファイルをコピー
-COPY go.mod go.sum ./
+# ソースコードをコピー
+COPY . .
 
 # 依存関係のダウンロード
 RUN go mod download
 
-# ソースコードをコピー
-COPY . .
+# アプリケーションをビルド
+RUN go build -o myapp ./cmd/myapp/main.go
+
+CMD ["./myapp"]
